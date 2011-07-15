@@ -11,5 +11,6 @@
             <fileset dir="bin"/>
             <fileset dir="src"/>
         </jar>
+    	<chmod perm="+x" file="mrp.jar"></chmod>
     </target>
 </project>
