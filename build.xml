@@ -3,13 +3,13 @@
     <!--this file was created by Eclipse Runnable JAR Export Wizard-->
     <!--ANT 1.7 is required                                        -->
     <target name="create_run_jar">
-        <jar destfile="/v/filer4b/v25q009/smirarab/workspace/mrpmatrix/mrp.jar" filesetmanifest="mergewithoutmain">
+        <jar destfile="mrp.jar" filesetmanifest="mergewithoutmain">
             <manifest>
                 <attribute name="Main-Class" value="phylolab.mrp.FastMRP"/>
                 <attribute name="Class-Path" value="."/>
             </manifest>
-            <fileset dir="/v/filer4b/v25q009/smirarab/workspace/mrpmatrix/bin"/>
-            <fileset dir="/v/filer4b/v25q009/smirarab/workspace/mrpmatrix/src"/>
+            <fileset dir="bin"/>
+            <fileset dir="src"/>
         </jar>
     </target>
 </project>
