@@ -156,7 +156,7 @@ public class FastMRP {
 		if (args.length < 3) {
 			System.err.println("Usage: <treesfile> <output> <ouputformat>\n" +
 					"		<treesfile>: A file containing newick trees, one tree per line\n" +
-					"		<Output>: The name of the output MRPMatrix file\n" +
+					"		<Output>: The name of the output MRP Matrix file\n" +
 					"		<outformat>: use NEXUS for nexus, or FASTA for fasta fromatted otuput\n");
 			System.exit(1);
 		}
