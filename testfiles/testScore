@@ -1,0 +1,10 @@
+#NEXUS
+begin paup;
+	set autoclose nowarnreset nowarntree nowarntsave;
+set maxtrees = 100 increase = no;
+
+execute 'testNexus';
+execute 'testTree';
+Pscores ALL / scoreFile='score';
+
+end;
