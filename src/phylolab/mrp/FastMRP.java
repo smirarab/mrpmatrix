@@ -184,6 +184,7 @@ public class FastMRP {
 		 * Mapping taxa names to IDs 
 		 */
 		HashMap<String, Integer> taxaNameToIndex = new HashMap<String, Integer>();
+		ArrayList<String> taxaIndexToNames = new ArrayList<String>();
 		
 		private Iterator<String> namesIter;
 		private Iterator<HashSet<Integer>> treesIter;
@@ -200,6 +201,7 @@ public class FastMRP {
 			} else {
 				currentSeqIndex++;
 				taxaNameToIndex.put(taxon, currentSeqIndex);
+				taxaIndexToNames.add(currentSeqIndex,taxon);
 				return currentSeqIndex;
 			}
 		}
@@ -224,7 +226,7 @@ public class FastMRP {
 		void startSeqIteration() {
 			treesIter = treesPerSequence.iterator();
 			columnsIter = columnsPerSequence.iterator();
-			namesIter = taxaNameToIndex.keySet().iterator();
+			namesIter = taxaIndexToNames.iterator();
 		}		
 		boolean hasMoreTaxa () {
 			return treesIter.hasNext();
