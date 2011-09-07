@@ -26,10 +26,13 @@ public class FastMRP {
 													"\tmatrix\n";
 	private static final String NEXUS_FOOTER = "\t;\n" +
 												"end;\n";
+	private static final String PHYLIP = "PHYLIP";
+	private static final String PHYLIP_HEADER = "@ @\n";
+											
 
-	final char ONE = '1';
-	final char ZERO = '0';
-	final char MISSING = '?';	
+	char ONE = '1';
+	char ZERO = '0';
+	char MISSING = '?';	
 	
 	InfoPerTaxa perTaxaInfo = new InfoPerTaxa();
 	TreeEndIndix treeEndIndix = new TreeEndIndix();
@@ -47,6 +50,12 @@ public class FastMRP {
 		treesFileName = inFileName;
 		mrpFileName = outFileName;
 		this.format = format;
+	}
+	
+	public void setCharacters(char newOne, char newZero, char newMissing) {
+		ONE = newOne;
+		ZERO = newZero;
+		MISSING = newMissing;
 	}
 	
 	private void readTreesFile() throws IOException {
@@ -127,22 +136,28 @@ public class FastMRP {
 	}
 
 	private void writeFooterToFile(BufferedWriter out) throws IOException {
-		if (NEXUS.equals(format)){
+		if (NEXUS.equalsIgnoreCase(format)){
 			out.write(NEXUS_FOOTER);
 		}		
 	}
 
 	private void writeHeaderToFile(BufferedWriter out) throws IOException {
-		if (NEXUS.equals(format)){
+		if (NEXUS.equalsIgnoreCase(format)){
 			String header = NEXUS_HEADER.replaceFirst("@",perTaxaInfo.getNumberOfTaxa()+"").
 				replaceFirst("@", perTaxaInfo.getNumberOfBipartitions()+"");
 			out.write(header);
-		}		
+		} else if (PHYLIP.equalsIgnoreCase(format)){
+			String header = PHYLIP_HEADER.replaceFirst("@",perTaxaInfo.getNumberOfTaxa()+"").
+				replaceFirst("@", perTaxaInfo.getNumberOfBipartitions()+"");
+			out.write(header);
+		}
 	}
 
 	private void writeSequenceNameToFile(BufferedWriter out) throws IOException {
 		if (NEXUS.equals(format)){
 			out.write("\t'"+perTaxaInfo.getCurrentSeqName()+"' ");
+		} else if (format.equalsIgnoreCase(PHYLIP)){
+			out.write(perTaxaInfo.getCurrentSeqName()+" ");
 		} else {
 			out.write(">"+perTaxaInfo.getCurrentSeqName());
 			out.newLine();
@@ -154,13 +169,18 @@ public class FastMRP {
 	 */
 	public static void main(String[] args) {
 		if (args.length < 3) {
-			System.err.println("Usage: <treesfile> <output> <ouputformat>\n" +
+			System.err.println("Usage: <treesfile> <output> <ouputformat> [dna]\n" +
 					"		<treesfile>: A file containing newick trees, one tree per line\n" +
 					"		<Output>: The name of the output MRP Matrix file\n" +
-					"		<outformat>: use NEXUS for nexus, or FASTA for fasta fromatted otuput\n");
+					"		<outformat>: use NEXUS for nexus, PHYLIP for phylip, or FASTA for fasta fromatted otuput\n"+
+					" 		dna: output As and Ts instead of 0 and 1");
+					
 			System.exit(1);
 		}
 		FastMRP mrpCon = new FastMRP(args[0], args[1],args[2]);
+		if (args.length == 4 && args[3].equals("dna")) {
+			mrpCon.setCharacters('A','T','-');
+		}
 		try {
 			mrpCon.readTreesFile();
 			mrpCon.writeMRPToFile();
@@ -179,21 +199,22 @@ public class FastMRP {
 		/*
 		 * Index to Arraylist ~ sequences, Elements in HashSet ~ Trees
 		 */
+		// TODO: can make this more memory efficient by turning the set to a list
 		ArrayList<HashSet<Integer>> treesPerSequence = new ArrayList<HashSet<Integer>>();
 		/*
 		 * Mapping taxa names to IDs 
 		 */
 		HashMap<String, Integer> taxaNameToIndex = new HashMap<String, Integer>();
-		ArrayList<String> taxaIndexToNames = new ArrayList<String>();
+		ArrayList<String> taxaNames = new ArrayList<String>();
 		
 		private Iterator<String> namesIter;
 		private Iterator<HashSet<Integer>> treesIter;
 		private Iterator<ArrayList<Integer>> columnsIter;
-		private Iterator<Integer> currentSeqColumnsIter;
 		
+		private Iterator<Integer> currentSeqColumnsIter;		
 		private HashSet<Integer> currentTrees;		
 		private ArrayList<Integer> currentColumns;
-		private String currentSeqName;		
+		private String currentSeqName;
 						
 		public Integer mapNamesToIds(String taxon) {
 			if (taxaNameToIndex.containsKey(taxon)) {
@@ -201,7 +222,7 @@ public class FastMRP {
 			} else {
 				currentSeqIndex++;
 				taxaNameToIndex.put(taxon, currentSeqIndex);
-				taxaIndexToNames.add(currentSeqIndex,taxon);
+				taxaNames.add(currentSeqIndex,taxon);
 				return currentSeqIndex;
 			}
 		}
@@ -226,16 +247,18 @@ public class FastMRP {
 		void startSeqIteration() {
 			treesIter = treesPerSequence.iterator();
 			columnsIter = columnsPerSequence.iterator();
-			namesIter = taxaIndexToNames.iterator();
-		}		
+			namesIter = taxaNames.iterator();
+		}
+		
 		boolean hasMoreTaxa () {
 			return treesIter.hasNext();
 		}
+		
 		void nextSequence () {
 			currentTrees = treesIter.next();
 			currentColumns = columnsIter.next();
+			currentSeqColumnsIter = currentColumns.iterator();
 			currentSeqName = namesIter.next();
-			currentSeqColumnsIter = currentColumns.iterator();			
 		}
 		boolean currentSeqIsInTree (Integer treeId) {
 			return currentTrees.contains(treeId);
@@ -250,6 +273,7 @@ public class FastMRP {
 		public String getCurrentSeqName() {
 			return currentSeqName;
 		}
+		
 		public Integer getNumberOfTaxa(){
 			return currentSeqIndex+1;
 		}
@@ -264,13 +288,14 @@ public class FastMRP {
 		 */
 		ArrayList<Integer> treeEndIndex = new ArrayList<Integer>();
 		private Iterator<Integer> iter;
-		
 		public void addEndIndex(int lastColumnIndex) {
 			treeEndIndex.add(lastColumnIndex);
-		}		
+		}
+		
 		void restartTreeIteration(){
 			iter = treeEndIndex.iterator();
-		}		
+		}
+		
 		int getNexTreeEndInd(){
 			return iter.next();
 		}
