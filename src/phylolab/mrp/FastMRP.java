@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.Random;
 import java.util.Vector;
 import phylolab.NewickTokenizer;
 
@@ -45,6 +46,8 @@ public class FastMRP {
 	private String treesFileName;
 	private String mrpFileName;
 	private String format;
+	
+	Random random = null;
 	
 	public FastMRP(String inFileName, String outFileName, String format) {
 		treesFileName = inFileName;
@@ -112,11 +115,12 @@ public class FastMRP {
 				int treeEndInd = treeEndIndix.getNexTreeEndInd();
 				if (perTaxaInfo.currentSeqIsInTree(tree)) {
 					while (column <= treeEndInd) {
+						Boolean coding = perTaxaInfo.columnCoding.get(column);
 						if (nextOneColumn == column) {
-							out.write(ONE);
+							out.write(coding? ONE:ZERO);
 							nextOneColumn = perTaxaInfo.nextBipartitionIndexForCurrentSequence();
 						} else {
-							out.write(ZERO);
+							out.write(coding? ZERO:ONE);
 						}
 						column ++;
 					}
@@ -169,17 +173,30 @@ public class FastMRP {
 	 */
 	public static void main(String[] args) {
 		if (args.length < 3) {
-			System.err.println("Usage: <treesfile> <output> <ouputformat> [dna]\n" +
+			System.err.println("Usage: <treesfile> <output> <ouputformat> [-dna] [-randomize seed]\n" +
 					"		<treesfile>: A file containing newick trees, one tree per line\n" +
 					"		<Output>: The name of the output MRP Matrix file\n" +
 					"		<outformat>: use NEXUS for nexus, PHYLIP for phylip, or FASTA for fasta fromatted otuput\n"+
-					" 		dna: output As and Ts instead of 0 and 1");
+					" 		-dna: output As and Ts instead of 0 and 1\n" +
+					"		-randomize: randomize 0-1 codings. Seed number is optional.");
 					
 			System.exit(1);
 		}
 		FastMRP mrpCon = new FastMRP(args[0], args[1],args[2]);
-		if (args.length == 4 && args[3].equals("dna")) {
-			mrpCon.setCharacters('A','T','-');
+		
+		for (int i = 0; i < args.length; i++) {
+			if (args[i].equals("-dna")) {
+				mrpCon.setCharacters('A','T','-');
+			} else if (args[i].equals("-randomize")) {
+				try {
+					int seed = Integer.parseInt(args[i+1]);
+					mrpCon.random = new Random(seed);
+				} catch(NumberFormatException e) {
+					mrpCon.random = new Random();
+				} catch(IndexOutOfBoundsException e) {
+					mrpCon.random = new Random();
+				}
+			}
 		}
 		try {
 			mrpCon.readTreesFile();
@@ -193,11 +210,11 @@ public class FastMRP {
 		Integer currentSeqIndex = -1;
 		Integer currentColumnInd = -1;
 		/*
-		 * 1st List's index ~ sequences, 2nd List's values ~ column indecies
+		 * Index of 1st List ~ sequences, 2nd List's values ~ column indecies
 		 */
 		ArrayList<ArrayList<Integer>> columnsPerSequence = new ArrayList<ArrayList<Integer>>();
 		/*
-		 * Index to Arraylist ~ sequences, Elements in HashSet ~ Trees
+		 * Index of Arraylist ~ sequences, Elements in HashSet ~ Trees
 		 */
 		// TODO: can make this more memory efficient by turning the set to a list
 		ArrayList<HashSet<Integer>> treesPerSequence = new ArrayList<HashSet<Integer>>();
@@ -206,6 +223,11 @@ public class FastMRP {
 		 */
 		HashMap<String, Integer> taxaNameToIndex = new HashMap<String, Integer>();
 		ArrayList<String> taxaNames = new ArrayList<String>();
+		/*
+		 * Mapping columns to either 0 or 1 (randomly) to ensure equal 0s or 1s
+		 * Index ~ 
+		 */
+		private ArrayList<Boolean> columnCoding = new ArrayList<Boolean>();
 		
 		private Iterator<String> namesIter;
 		private Iterator<HashSet<Integer>> treesIter;
@@ -229,6 +251,9 @@ public class FastMRP {
 		
 		public int addBipartition(Collection<Integer> bipartition) {
 			currentColumnInd++;
+			// Randomly assign codings to columns if -randomize is provided
+			columnCoding.add(currentColumnInd , random==null? true:random.nextBoolean()); 
+
 			for (Integer sequence : bipartition) {
 				columnsPerSequence.get(sequence).add(currentColumnInd);
 			}
