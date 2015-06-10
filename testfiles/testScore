@@ -3,7 +3,7 @@ begin paup;
 	set autoclose nowarnreset nowarntree nowarntsave;
 set maxtrees = 100 increase = no;
 
-execute 'testNexus';
+execute 'sm_data.out';
 execute 'testTree';
 Pscores ALL / scoreFile='score';
 
